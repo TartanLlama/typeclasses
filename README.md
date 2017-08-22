@@ -15,11 +15,11 @@ The `typeclass` metaclass will generate a class which can be constructed from va
 Say that we have a couple of classes which fulfil this interface:
 
 ```cpp
-struct foo_printable {
+struct foo {
     void print() { std::cout << "foo"; }
 };
 
-struct bar_printable {
+struct bar {
     void print() { std::cout << "bar"; }
 };
 ```

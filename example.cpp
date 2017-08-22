@@ -5,11 +5,11 @@ typeclass printable {
     void print();
 };
 
-struct foo_printable {
+struct foo {
     void print() { std::cout << "foo"; }
 };
 
-struct bar_printable {
+struct bar {
     void print() { std::cout << "bar"; }
 };
 
