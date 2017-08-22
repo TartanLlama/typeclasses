@@ -14,7 +14,7 @@ struct bar_printable {
 };
 
 int main() {
-    std::vector<typeclass_value<printable>> v;
+    std::vector<printable> v;
     v.push_back(foo{});
     v.push_back(bar{});
     v[0].print();

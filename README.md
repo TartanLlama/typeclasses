@@ -10,6 +10,8 @@ typeclass printable {
 };
 ```
 
+The `typeclass` metaclass will generate a class which can be constructed from values of any type satisfying the interface. The given object will be type-erased and forwarding functions will be generated to call the relevant functions on the implementation.
+
 Say that we have a couple of classes which fulfil this interface:
 
 ```cpp
@@ -22,11 +24,11 @@ struct bar_printable {
 };
 ```
 
-We can type-erase these objects by using the `typeclass_value` class:
+We can type-erase these objects by using `printable`:
 
 ```cpp
-typeclass_value<printable> a = foo{};
-typeclass_value<printable> b = bar{};
+printable a = foo{};
+printable b = bar{};
 a.print();
 b.print();
 ```
@@ -34,11 +36,21 @@ b.print();
 We could even store them in a container:
 
 ```cpp
-std::vector<typeclass_value<printable>> v;
+std::vector<printable> v;
 v.push_back(foo{});
 v.push_back(bar{});
 v[0].print();
 v[1].print();
+```
+
+Or reassign from different types:
+
+
+```cpp
+printable a = foo{}
+a.print();
+a = bar{};
+a.print();
 ```
 
 As support in the compiler progresses, I'll think about adding opt-in features, or C++11-concepts-style concept maps.

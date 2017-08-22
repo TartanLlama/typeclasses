@@ -2,8 +2,6 @@
 #include <cppx/compiler>
 #include <cppx/meta>
 
-$class typeclass{};
-
 template <class T>
 class model {
 public:
@@ -32,14 +30,13 @@ private:
     I i;
 };
 
-template <class T>
-class typeclass_value {
+$class typeclass {
 private:
     std::unique_ptr<model<T>> m_model;
 
 public:
     constexpr {
-        for... (auto func : reflexpr(T).functions) {
+        for... (auto func : $prototype.functions) {
                 -> class { public:
                     auto (func$) (func$ args) {
                         return m_model->idexpr(func.name())(args...);
@@ -49,7 +46,13 @@ public:
     }
 
     template <class U>
-    typeclass_object(const U& u) : m_model{ new impl<T,U>{u} }
+    typeclass(const U& u) : m_model{ new impl<T,U>{u} }
     {}
+
+    template <class U>
+    typeclass& operator=(const U& u) {
+        m_model.reset(new impl<T,U>{u});
+    }
+
 };
 
