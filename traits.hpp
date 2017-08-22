@@ -32,11 +32,11 @@ private:
 
 $class typeclass {
 private:
-    std::unique_ptr<model<T>> m_model;
+    std::unique_ptr<model<typeclass>> m_model;
 
 public:
     constexpr {
-        for... (auto func : $prototype.functions) {
+        for... (auto func : $typeclass.functions) {
                 -> class { public:
                     auto (func$) (func$ args) {
                         return m_model->idexpr(func.name())(args...);
@@ -46,12 +46,12 @@ public:
     }
 
     template <class U>
-    typeclass(const U& u) : m_model{ new impl<T,U>{u} }
+    typeclass(const U& u) : m_model{ new impl<typeclass,U>{u} }
     {}
 
     template <class U>
     typeclass& operator=(const U& u) {
-        m_model.reset(new impl<T,U>{u});
+        m_model.reset(new impl<typeclass,U>{u});
     }
 
 };
