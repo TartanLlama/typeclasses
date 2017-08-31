@@ -47,7 +47,7 @@ Or reassign from different types:
 
 
 ```cpp
-printable a = foo{}
+printable a = foo{};
 a.print();
 a = bar{};
 a.print();
