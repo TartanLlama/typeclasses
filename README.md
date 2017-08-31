@@ -55,3 +55,4 @@ a.print();
 
 As support in the compiler progresses, I'll think about adding opt-in features, or C++11-concepts-style concept maps.
 
+See Sean Parent's talks on [Inheritance is the Base Class of Evil](https://www.youtube.com/watch?v=bIhUE5uUFOA) and [Value Semantics and Concepts-based Polymorphism](https://www.youtube.com/watch?v=_BpMYeUFXv8) for some of the motivation behind this. See [Dyno](https://github.com/ldionne/dyno) and [Boost.TypeErasure](http://www.boost.org/doc/libs/1_55_0/doc/html/boost_typeerasure.html) for other implementations.
