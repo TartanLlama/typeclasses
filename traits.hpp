@@ -65,7 +65,7 @@ public:
     }
 
     typeclass& operator=(const typeclass& rhs) {
-        m_model.reset(rhs.m_model.clone());
+        m_model.reset(rhs.m_model->clone());
     }
     
     typeclass& operator=(typeclass&&) = default;
