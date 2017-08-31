@@ -5,12 +5,16 @@
 template <class T>
 class model {
 public:
+    // model will be inherited from by impl, so need virtual destructor
     virtual ~model() = default;
+
+    // Generate pure virtual functions for every member function of the typeclass
     constexpr {
         for... (auto func : reflexpr(T).functions) {
                 -> class { virtual func.type() func$ (func$ args) = 0; }
             }
     }
+    // Virtual clone pattern for value semantics
     virtual std::unique_ptr<model> clone() = 0;
 };
 
@@ -19,6 +23,8 @@ class impl : public model<T> {
 public:
     impl(const I& i) : i{i} {}
 
+    // Generate overrides of the model functions which forward calls on
+    // to the type erased object
     constexpr {
         for... (auto func : reflexpr(T).functions) {
                 -> class {
@@ -29,6 +35,7 @@ public:
             }
     }
 
+    // Perform a full copy of i
     std::unique_ptr<model> clone() {
         return std::make_unique<impl>(i);
     }
@@ -42,6 +49,8 @@ private:
     std::unique_ptr<model<typeclass>> m_model;
 
 public:
+    // Generate functions for every member function in the typeclass
+    // which forward calls on to the model
     constexpr {
         for... (auto func : $typeclass.functions) {
                 -> class { public:
@@ -52,18 +61,22 @@ public:
             }
     }
 
+    // Capture the type which is passed in and type-erase it
     template <class U>
     typeclass(const U& u) : m_model{ new impl<typeclass,U>{u} }
     {}
 
+    // Needed for correct value semantics
     typeclass(const typeclass& rhs) : m_model{ rhs.m_model->clone(); };
     typeclass(typeclass&&) = default;    
 
+    // Capture the type which is passed in and type-erase it
     template <class U>
     typeclass& operator=(const U& u) {
         m_model.reset(new impl<typeclass,U>{u});
     }
 
+    // Needed for correct value semantics
     typeclass& operator=(const typeclass& rhs) {
         m_model.reset(rhs.m_model->clone());
     }
