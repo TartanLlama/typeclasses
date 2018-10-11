@@ -9,80 +9,101 @@ public:
     virtual ~model() = default;
 
     // Generate pure virtual functions for every member function of the typeclass
-    constexpr {
-        for... (auto func : reflexpr(T).functions) {
-                -> class { virtual func.type() func$ (func$ args) = 0; }
-            }
+    constexpr{
+    for... (auto func : reflexpr(T).functions()) {
+        auto ret = func.return_type();
+        if (func.is_normal() && !func.is_copy_assign() && !func.is_move_assign()) {
+        __generate __fragment struct {
+            virtual typename(ret) idexpr(func) (__inject(func.parameters()) args) = 0; 
+        };
+        }
     }
+    }
+    
     // Virtual clone pattern for value semantics
     virtual std::unique_ptr<model> clone() = 0;
 };
 
 template <class T, class I>
 class impl : public model<T> {
+private:
+    I i;
+
 public:
     impl(const I& i) : i{i} {}
 
     // Generate overrides of the model functions which forward calls on
     // to the type erased object
     constexpr {
-        for... (auto func : reflexpr(T).functions) {
-                -> class {
-                    func.type() (func$) (func$ args) {
-                        return i.idexpr(func.name())(args...);
+        for... (auto func : reflexpr(T).functions()) {
+                auto ret = func.return_type();
+                if (func.is_normal() && !func.is_copy_assign() && !func.is_move_assign()) {
+                __generate __fragment struct { 
+                    typename(ret) idexpr(func) (__inject(func.parameters()) args) {
+                        return this->i.idexpr(func)(args...);
                     }
+                };
                 }
             }
     }
 
     // Perform a full copy of i
-    std::unique_ptr<model> clone() {
+    std::unique_ptr<model<T>> clone() {
         return std::make_unique<impl>(i);
     }
     
-private:
-    I i;
 };
 
-$class typeclass {
-private:
-    std::unique_ptr<model<typeclass>> m_model;
 
-public:
+template <class T>
+constexpr void typeclass (T source) {
+    __generate __fragment class X { private:
+        std::unique_ptr<model<X>> m_model;
+    };
+
+
     // Generate functions for every member function in the typeclass
     // which forward calls on to the model
-    constexpr {
-        for... (auto func : $typeclass.functions) {
-                -> class { public:
-                    auto (func$) (func$ args) {
-                        return m_model->idexpr(func.name())(args...);
-                    }
-                }
+    for... (auto func : source.functions()) {
+        auto ret = func.return_type();
+        __generate __fragment struct { 
+            typename(ret) idexpr(func) (__inject(func.parameters()) args) {
+                return this->m_model->idexpr(func)();
             }
+        };
     }
 
+    // THIS ICES
+/*
+    __generate __fragment struct X {
     // Capture the type which is passed in and type-erase it
-    template <class U>
-    typeclass(const U& u) : m_model{ new impl<typeclass,U>{u} }
-    {}
-
-    // Needed for correct value semantics
-    typeclass(const typeclass& rhs) : m_model{ rhs.m_model->clone(); };
-    typeclass(typeclass&&) = default;    
-
-    // Capture the type which is passed in and type-erase it
-    template <class U>
-    typeclass& operator=(const U& u) {
-        m_model.reset(new impl<typeclass,U>{u});
+    template <class U> X(const U& u) {
+        this->m_model = new impl<X,U>{u};
     }
 
-    // Needed for correct value semantics
-    typeclass& operator=(const typeclass& rhs) {
-        m_model.reset(rhs.m_model->clone());
+// Capture the type which is passed in and type-erase it
+    template <class U>
+    X& operator=(const U& u) {
+        m_model.reset(new impl<X,U>{u});
     }
-    
-    typeclass& operator=(typeclass&&) = default;
+    };
+    */
 
-    ~typeclass() = default;
-};
 
+    __generate __fragment class X { public:
+    // Virtual clone
+    X(const X& rhs) { 
+        this->m_model = rhs.m_model->clone(); 
+    }
+    X(X&&) = default;
+
+    // Virtual clone
+    X& operator=(const X& rhs) {
+        m_model = rhs.m_model->clone();
+    }
+
+    X& operator=(X&&) = default;
+
+    ~X() = default;
+    };
+}
