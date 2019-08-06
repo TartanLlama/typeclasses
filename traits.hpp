@@ -1,6 +1,14 @@
 #include <memory>
-#include <cppx/compiler>
-#include <cppx/meta>
+#include <experimental/meta>
+
+namespace meta = std::experimental::meta;
+
+consteval bool should_generate_function_for(meta::info i) {
+    return meta::is_member_function(i) and
+           meta::is_normal(i) and 
+           not meta::is_copy_assignment_operator(i) and
+           not meta::is_move_assignment_operator(i);
+}
 
 template <class T>
 class model {
@@ -9,13 +17,14 @@ public:
     virtual ~model() = default;
 
     // Generate pure virtual functions for every member function of the typeclass
-    constexpr{
-    for... (auto func : reflexpr(T).functions()) {
-        auto ret = func.return_type();
-        if (func.is_normal() && !func.is_copy_assign() && !func.is_move_assign()) {
-        __generate __fragment struct {
-            virtual typename(ret) idexpr(func) (__inject(func.parameters()) args) = 0; 
-        };
+    consteval{
+    for (auto func : meta::range(reflexpr(T))) {
+        if (should_generate_function_for(func)) {
+            auto ret = meta::return_type_of(func);
+            meta::range params(func);
+            -> __fragment struct {
+                virtual typename(ret) unqualid(func) (-> params) = 0; 
+            };
         }
     }
     }
@@ -34,17 +43,18 @@ public:
 
     // Generate overrides of the model functions which forward calls on
     // to the type erased object
-    constexpr {
-        for... (auto func : reflexpr(T).functions()) {
-                auto ret = func.return_type();
-                if (func.is_normal() && !func.is_copy_assign() && !func.is_move_assign()) {
-                __generate __fragment struct { 
-                    typename(ret) idexpr(func) (__inject(func.parameters()) args) {
-                        return this->i.idexpr(func)(args...);
+    consteval {
+        for (auto func : meta::range(reflexpr(T))) {
+            if (should_generate_function_for(func)) {
+                auto ret = meta::return_type_of(func);
+                meta::range params(func);
+                -> __fragment struct { 
+                    typename(ret) unqualid(func) (-> params) {
+                        this->i.unqualid(func)(unqualid(...params));
                     }
                 };
-                }
-            }
+             }
+        }
     }
 
     // Perform a full copy of i
@@ -54,43 +64,80 @@ public:
     
 };
 
+consteval void gen_func(meta::info func) {
+    auto ret = meta::return_type_of(func);
+    meta::range params(func);
+    -> __fragment struct { 
+        typename(ret) unqualid(func) (-> params) {
+            return this->m_model->unqualid(func)(unqualid(...params));
+        }
+    };
+}
+
+// Generate functions for every member function in the typeclass
+// which forward calls on to the model
+consteval void gen_funcs(meta::info interface) {
+    for (auto func : meta::range(interface)) {
+        if (should_generate_function_for(func)) {
+            gen_func(func);
+        }
+    }
+}
+
 
 template <class T>
-constexpr void typeclass (T source) {
-    __generate __fragment class X { private:
-        std::unique_ptr<model<X>> m_model;
-    };
+class typeclass_for {
+private:
+    std::unique_ptr<model<T>> m_model;
 
-
-    // Generate functions for every member function in the typeclass
-    // which forward calls on to the model
-    for... (auto func : source.functions()) {
-        auto ret = func.return_type();
-        __generate __fragment struct { 
-            typename(ret) idexpr(func) (__inject(func.parameters()) args) {
-                return this->m_model->idexpr(func)();
-            }
-        };
+public:
+    consteval{
+        gen_funcs(reflexpr(T));
     }
 
-    // THIS ICES
-/*
-    __generate __fragment struct X {
     // Capture the type which is passed in and type-erase it
-    template <class U> X(const U& u) {
-        this->m_model = new impl<X,U>{u};
+    template <class U> typeclass_for(const U& u) :
+        m_model(new impl<T,U>{u}) {
+    }
+    // Capture the type which is passed in and type-erase it
+    template <class U>
+    typeclass_for& operator=(const U& u) {
+        this->m_model.reset(new impl<T,U>{u});
+    }
+    // Virtual clone
+    typeclass_for(const typeclass_for& rhs) { 
+        this->m_model = rhs.m_model->clone(); 
+    }
+    typeclass_for(typeclass_for&&) = default;
+
+    // Virtual clone
+    typeclass_for& operator=(const typeclass_for& rhs) {
+        this->m_model = rhs.m_model->clone();
+        return *this;
     }
 
-// Capture the type which is passed in and type-erase it
+    typeclass_for& operator=(typeclass_for&&) = default;
+
+    ~typeclass_for() = default;
+};
+
+consteval void typeclass(meta::info source) {
+   gen_funcs(source);
+
+   -> __fragment class X {
+private:
+    std::unique_ptr<model<X>> m_model;
+
+public:
+    // Capture the type which is passed in and type-erase it
+    template <class U> X(const U& u) :
+        m_model(new impl<X,U>{u}) {
+    }
+    // Capture the type which is passed in and type-erase it
     template <class U>
     X& operator=(const U& u) {
-        m_model.reset(new impl<X,U>{u});
+        this->m_model.reset(new impl<X,U>{u});
     }
-    };
-    */
-
-
-    __generate __fragment class X { public:
     // Virtual clone
     X(const X& rhs) { 
         this->m_model = rhs.m_model->clone(); 
@@ -99,11 +146,12 @@ constexpr void typeclass (T source) {
 
     // Virtual clone
     X& operator=(const X& rhs) {
-        m_model = rhs.m_model->clone();
+        this->m_model = rhs.m_model->clone();
+        return *this;
     }
 
     X& operator=(X&&) = default;
 
     ~X() = default;
-    };
+   };
 }
