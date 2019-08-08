@@ -1,23 +1,36 @@
 #include <iostream>
-#include "traits.hpp"
+#include "typeclass.hpp"
 
-typeclass printable {
-    void print();
+class(tl::typeclass) the_typeclass {
+    void f();
+    void g();
 };
 
-struct foo {
-    void print() { std::cout << "foo"; }
+struct an_instance {
+    void f(){}
+    void g(){}
 };
 
-struct bar {
-    void print() { std::cout << "bar"; }
+class(tl::typeclass) producer {
+    int produce();
+};
+
+struct static_producer {
+    int produce() {
+        return 42;
+    }
+};
+
+struct dynamic_producer {
+    int i;
+    int produce() { 
+        return i;
+    }
 };
 
 int main() {
-    std::vector<printable> v;
-    v.push_back(foo{});
-    v.push_back(bar{});
-    v[0].print();
-    v[1].print();
+    producer a = static_producer{};
+    producer b = dynamic_producer{12};
+    return a.produce() + b.produce();
 }
 

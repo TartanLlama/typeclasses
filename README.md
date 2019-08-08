@@ -1,11 +1,11 @@
 # Typeclasses in C++
 
-This is an idea of how Rust-like trait objects could be implemented in C++ using static reflection, code injection and metaclasses. This solution is very succinct, requiring no boilerplate or arcane tricks. It can't currently be compiled by the Metaclasses Clang fork, but I believe that something like this should be possible in the future.
+This is an idea of how Rust-like trait objects could be implemented in C++ using static reflection, code injection and metaclasses. This solution is very succinct, requiring no boilerplate or arcane tricks. It has been tested against the Clang fork at https://gitlab.com/lock3/clang.git 02eaac5aa06dfa0d19de95270bccd6311f11f5ba.
 
 The idea is to use class definitions which have only declarations of members as typeclasses. For example, a typeclass which is satisfied by classes with a `print` function which returns nothing and takes no arguments can be defined as follows:
 
 ```cpp
-typeclass printable {
+class(typeclass) printable {
     void print();
 };
 ```
