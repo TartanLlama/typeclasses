@@ -1,16 +1,6 @@
 #include <iostream>
 #include "typeclass.hpp"
 
-class(tl::typeclass) the_typeclass {
-    void f();
-    void g();
-};
-
-struct an_instance {
-    void f(){}
-    void g(){}
-};
-
 class(tl::typeclass) producer {
     int produce();
 };

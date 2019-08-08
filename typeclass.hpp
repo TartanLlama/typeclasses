@@ -104,7 +104,7 @@ public:
         return correctly_typed_function(*this, std::forward<Args>(args)...);
     }
 };
-template<class>struct TC;
+
 //This is the implementation of a typeclasses model for a given concrete type.
 //When constructed, it will fill in all the function pointers declared above
 // and store an instance of the concrete type.
@@ -126,25 +126,18 @@ public:
             return std::make_unique<impl>(std::move(static_cast<impl&>(m).ct));
         };
 
-        //Compiler bug workaround.
+        //Compiler bug (https://gitlab.com/lock3/clang/issues/194) workaround.
         auto& dispatch_table = this->dispatch_table_;
 
         //Fill in the dispatch table with pointers to static member functions which we'll generate below.
         consteval {
             std::size_t idx = 0;
-            for (auto func : meta::member_fn_range(reflexpr(Typeclass))) {
-                if (should_generate_function_for(func)) {
-                    auto ret = meta::return_type_of(func);
-                    meta::param_range params(func);
-                    -> __fragment { 
-                        auto l = +[](base& mod, ->params) constexpr {
-                    return static_cast<impl&>(mod).ct.produce(unqualid(...params));
+            for_each_declared_function(reflexpr(Typeclass), [&idx](auto func, auto ret, auto params) constexpr {
+                -> __fragment { 
+                    dispatch_table[idx] = reinterpret_cast<void(*)()>(&impl::unqualid(func));
                 };
-                        dispatch_table[idx] = reinterpret_cast<void(*)()>(l);
-                    };
-                    idx++;
-                }
-            }  
+                idx++;
+            });  
 
         }
     }
@@ -154,6 +147,21 @@ private:
 
     //This is where the erased object finally ends up stored
     ConcreteType ct;
+
+    //Generate static member functions for each declaration in the typeclass which forwards calls
+    //on to the concrete instance.
+    //It would be possible to do some "concept map" here which can adapt concrete types onto the typeclass.
+    //This would have been nicer as a lambda, but the compiler has a bug (https://gitlab.com/lock3/clang/issues/195)
+    //which disallows it.
+    consteval {
+        for_each_declared_function(reflexpr(Typeclass), [](auto func, auto ret, auto params) constexpr {
+            -> __fragment class X { public:
+                static typename(ret) unqualid(func) (base& mod, ->params) {
+                    return static_cast<X&>(mod).ct.unqualid(func)(unqualid(...params));
+                }
+            };
+        });
+    }
 };
 
 //A storage helper to wrap storing the erased object and making sure that calls to 
@@ -186,7 +194,7 @@ private:
 
 //For every function we want to support, generate a function which forwards the call on to the storage.
 consteval void generate_call_forwarders(meta::info typeclass) {
-    //for_each_declared_function doesn't work here for some reason: compiler bug?
+    //for_each_declared_function doesn't work here due to a compiler bug(https://gitlab.com/lock3/clang/issues/196).
     std::size_t idx = 0;
     for (auto func : meta::member_fn_range(typeclass)) {
         if (should_generate_function_for(func)) {
