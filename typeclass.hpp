@@ -95,7 +95,7 @@ public:
     model& operator=(const model&) = delete;
 
     template<class Ret, class... Args>
-    Ret call(std::size_t idx, Args... args) {
+    Ret call(std::size_t idx, Args&&... args) {
         using desired_type = Ret(*)(model&, Args... args);
 
         auto void_function = this->dispatch_table_[idx];
@@ -177,7 +177,7 @@ public:
 
     //Forward a call on to the model
     template <class Ret, class... Ts>
-    Ret call(std::size_t idx, Ts... ts) {
+    Ret call(std::size_t idx, Ts&&... ts) {
         return model_->template call<Ret>(idx, std::forward<Ts>(ts)...);
     }
 
